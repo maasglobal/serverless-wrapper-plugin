@@ -1,2 +1,81 @@
-# serverless-wrapper-plugin
-A serverless framework plugin for wrapping all handlers with a common wrapper function
+Serverless Wrapper Plugin
+------------------------------------------------------------------------
+
+This goal of this plugin is to allow you to provide an easy way to wrap
+all your serverless functions with a common wrapper function, without
+having to edit all the functions themselves.
+
+One use case for this is for example, if you want to override ```console.warn``` to prepend a custom string, to make these warning easier to trace in the logs. You could add this to the begining of every handler in your project, or you could write one wrapper function to perform this override and use the ```serverless-wrapper-plugin``` to automatically wrap all your handlers.
+
+Another use case might be, you want to write a process to periodically make requests to your functions to keep them hot. You hadn't planned for this when you wrote all your handlers, so what input do you send to avoid causing either errors or unwanted side-effects? With the ```serverless-wrapper-plugin``` you could write a wrapper to intercept the input event, and if it is the dummy "wake up" event, then ignore it and return. If it isn't the dummy event then simply pass it through to the handler as normal.
+
+
+## Setup
+*NOTE*: This plugin is designed to work with the 0.5.x versions of the serverless framework.
+
+### Wrapper Function
+Firstly you need to write the wrapper function that you want to apply.
+This wrapper function should have the following form:
+
+```{js}
+function myWrapper(handler, event, context) {
+    // Do whatever you like here..
+    // ...
+
+    // Call the original handler
+    return handler(event, context);
+}
+
+module.exports = myWrapper;
+```
+
+The way that this is used is that the handler is transformed to be something like this:
+
+```{js}
+const _handler = require('...path to original handler...');
+const _wrapper = require('...path to myWrapper...');
+
+module.exports.handler = function (event, context) {
+    return _wrapper(_handler, event, context);
+}
+```
+
+### Plugin Installation
+* Install the plugin and webpack in the root of your Serverless Project:
+```{bash}
+npm install serverless-wrapper-plugin --save-dev
+```
+
+* Add the plugin to the `plugins` array in your Serverless Project's `s-project.json`, as below.
+*NOTE*: If you are using the ```serverless-webpack-plugin```, this plugin must be before the webpack plugin in the list.
+
+```{json}
+"plugins": [
+    "serverless-wrapper-plugin"
+]
+```
+
+* In the `custom` property of either your `s-project.json` or `s-function.json` add a wrapper property. The path is relative to the project root.
+
+[TODO: have a way to exclude functions from wrapping?]
+
+```{js}
+{
+    ...
+    "custom": {
+        "wrapper": {
+            "path": "path/relative/to/project-root"
+        }
+    }
+    ...
+}
+
+```
+
+## Development
+
+A brief note about development of the plugin itself. Part of the function of this plugin is to generate code. To do this it uses the template engine [doT.js](http://olado.github.io/doT/index.html).
+
+There is a template in ```lib/wrapped-handler.jst``` this is pre-compiled for runtime efficiency and saved as ```lib/wrapped-handler.js```.
+
+To re-compiled this template, you can use the convenience script in ```bin/compile-template.js```

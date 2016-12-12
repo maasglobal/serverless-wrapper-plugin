@@ -1,0 +1,23 @@
+{
+  "name": "serverless-wrapper-plugin",
+  "version": "0.0.2",
+  "description": "Serverless Wrapper Plugin - Wrap all your functions from one place",
+  "main": "index.js",
+  "directories": {
+    "test": "test"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "serverless",
+    "plugin"
+  ],
+  "author": "Konrad Markus <konker@iki.fi>",
+  "license": "ISC",
+  "dependencies": {
+    "bluebird": "^3.4.6",
+    "dot": "^1.1.1",
+    "fs-extra": "^1.0.0"
+  }
+}
