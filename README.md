@@ -48,6 +48,7 @@ npm install serverless-wrapper-plugin --save-dev
 ```
 
 * Add the plugin to the `plugins` array in your Serverless Project's `s-project.json`, as below.
+
 > WARNING: If you are using the ```serverless-webpack-plugin```, this plugin must be before the webpack plugin in the list.
 
 ```{json}
