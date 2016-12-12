@@ -1,5 +1,6 @@
 Serverless Wrapper Plugin
 ------------------------------------------------------------------------
+[![serverless](http://public.serverless.com/badges/v3.svg)](http://www.serverless.com)
 
 This goal of this plugin is to allow you to provide an easy way to wrap
 all your serverless functions with a common wrapper function, without
@@ -11,7 +12,9 @@ Another use case might be, you want to write a process to periodically make requ
 
 
 ## Setup
-*NOTE*: This plugin is designed to work with the 0.5.x versions of the serverless framework.
+> Not compatible with Serverless 1.0.0 and above
+
+> NOTE: If you are using the ```serverless-webpack-plugin```, this plugin must be before the webpack plugin in the list.
 
 ### Wrapper Function
 Firstly you need to write the wrapper function that you want to apply.
@@ -41,13 +44,14 @@ module.exports.handler = function (event, context) {
 ```
 
 ### Plugin Installation
-* Install the plugin and webpack in the root of your Serverless Project:
+* Install the plugin in the root of your Serverless Project:
 ```{bash}
 npm install serverless-wrapper-plugin --save-dev
 ```
 
 * Add the plugin to the `plugins` array in your Serverless Project's `s-project.json`, as below.
-*NOTE*: If you are using the ```serverless-webpack-plugin```, this plugin must be before the webpack plugin in the list.
+
+> NOTE: If you are using the ```serverless-webpack-plugin```, this plugin must be before the webpack plugin in the list.
 
 ```{json}
 "plugins": [
@@ -56,8 +60,6 @@ npm install serverless-wrapper-plugin --save-dev
 ```
 
 * In the `custom` property of either your `s-project.json` or `s-function.json` add a wrapper property. The path is relative to the project root.
-
-[TODO: have a way to exclude functions from wrapping?]
 
 ```{js}
 {
