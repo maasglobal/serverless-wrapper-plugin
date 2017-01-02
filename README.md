@@ -10,8 +10,8 @@ One use case for this is for example, if you want to override ```console.warn```
 Another use case might be, you want to write a process to periodically make requests to your functions to keep them hot. You hadn't planned for this when you wrote all your handlers, so what input do you send to avoid causing either errors or unwanted side-effects? With the ```serverless-wrapper-plugin``` you could write a wrapper to intercept the input event, and if it is the dummy "wake up" event, then ignore it and return. If it isn't the dummy event then simply pass it through to the handler as normal.
 
 **UPDATE 1.1.0**
-- Support function specific wrapper function, using `wrapperPath` option, set using relative wrapper path to `s-function.json` file.
-- Support skipping wrapper if `wrapperPath` is set to `false`
+- Support function specific wrapper function, using `wrapper.path` option, set using relative wrapper path to the root of the project in the `s-function.json` file.
+- Support skipping wrapper if function-specific `wrapper.path` is set to `false`
 
 
 ## Setup
@@ -62,7 +62,7 @@ npm install serverless-wrapper-plugin --save-dev
 ]
 ```
 
-* In the `custom` property of either your `s-project.json` or `s-function.json` add a default wrapper property. The path is relative to the project root. This is a fallback if your s-function does not contain a `wrapperPath` property.
+* In the `custom` property of either your `s-project.json` or `s-function.json` add a default wrapper property. The path is relative to the project root. This is a fallback if your s-function does not contain a `wrapper.path` property.
 
 ```{js}
 {
@@ -76,18 +76,24 @@ npm install serverless-wrapper-plugin --save-dev
 }
 ```
 
-* To set a custom wrapper for specific function, add the wrapper function's relative path to `s-function.json`. If you do not want your function to be wrapped by any wrapper function, event the default one, set the `wrapperPath` propertry to **false**
+* To set a custom wrapper for specific function, add the wrapper function's relative path to `s-function.json`. If you do not want your function to be wrapped by any wrapper function, event the default one, set the `wrapper` propertry to **false**
 ```{js}
   ...
   "name": "your-function",
   "runtime": "nodejs4.3",
-  "wrapperPath": "wrapper.js",
+  "custom": {
+    "wrapper" {
+      "path": "wrapper.js",
+    }
+  }
   "handler": "handler.handler",
   ...
   ...
   "name": "your-function",
   "runtime": "nodejs4.3",
-  "wrapperPath": false,
+  "custom": {
+    "wrapper": false
+  }
   "handler": "handler.handler",
   ...
 ```
