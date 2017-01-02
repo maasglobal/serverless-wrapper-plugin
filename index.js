@@ -50,58 +50,19 @@ module.exports = function getPlugin(S) {
       const func = project.getFunction(evt.options.name);
 
       if (func.runtime === 'nodejs' || func.runtime === 'nodejs4.3') {
-        const projectPath = S.config.projectPath;
         const config = project.custom.wrapper;
 
-        if (config && config.path) {
-          const pathSource = path.dirname(func.getFilePath());
-          const pathDist = evt.options.pathDist;
-
-          // Get the name of the handler function (within the handler module)
-          const handler = func.handler;
-          const handlerFunction = handler.split('.').shift();
-
-          // Information about the serverless framework version of the handler
-          // [NOTE: the version in the package directory (pathDist)]
-          const serverlessHandlerPath = this._getServerlessHandlerPath(func, pathDist);
-
-          // The new wrapped handler.
-          // This will take the place of the original serverless framework handler
-          const wrappedServerlessHandlerPath = serverlessHandlerPath;
-
-          // We will save the original serverless framework handler
-          // so that it can be included by the wrapped handler
-          // [NOTE: temporarily saved in the source directory]
-          const savedHandlerFilename = this._getSavedHandlerFilename(func);
-          const savedHandlerPath = this._getSavedHandlerPath(func, pathSource);
-
-          // Relative path to the wrapper function, from the serverless handler function
-          const rootPath = project.getRootPath();
-          const relativeWrapperPath =
-            path.relative(pathSource, path.join(rootPath, config.path));
-
-
-          // 1. Move the original serverless framework handler to savedHandlerPath
-          // [NOTE: force this write if necessary]
-          return fs.moveAsync(serverlessHandlerPath, savedHandlerPath, { clobber: true })
-            .then(() => {
-              // 2. Generate wrapped handler code
-              return CODE_TEMPLATE({
-                orig_handler_path: `./${savedHandlerFilename}`,
-                wrapper_path: relativeWrapperPath,
-                handler_name: handlerFunction,
-              });
-            })
-            .then(code => {
-              // 3. Write code to wrapped handler
-              return fs.writeFile(wrappedServerlessHandlerPath, code)
-            })
-            .then(() => {
-              // 4. Resolve the event
-              SCli.log(`Wrapping ${handler} with ${relativeWrapperPath}`);
-              return evt;
-            });
+        if (func.wrapperPath || func.wrapperPath === false) {
+          // If wrapperPath is 'false', skip wrapping
+          if (func.wrapperPath === false) return Promise.resolve(evt);
+          SCli.log('Using function specifically defined wrapper file');
+          return this._wrapHandler(project, func, evt);
+        } else if (config && config.path) {
+          SCli.log('Using project wrapper file');
+          return this._wrapHandler(project, func, evt);
         }
+
+        return Promise.resolve(evt);
       }
 
       // If we can't handle this event, just pass it through
@@ -124,7 +85,7 @@ module.exports = function getPlugin(S) {
       if (func.runtime === 'nodejs' || func.runtime === 'nodejs4.3') {
         const config = project.custom.wrapper;
 
-        if (config && config.path) {
+        if (func.wrapperPath || (config && config.path)) {
           const pathSource = path.dirname(func.getFilePath());
           const savedHandlerPath = this._getSavedHandlerPath(func, pathSource);
 
@@ -143,6 +104,59 @@ module.exports = function getPlugin(S) {
 
     // Helpers
     // ------------------------------------------------------------------------
+
+    _wrapHandler(project, func, evt) {
+      const pathSource = path.dirname(func.getFilePath());
+      const pathDist = evt.options.pathDist;
+
+      // Get the name of the handler function (within the handler module)
+      const handler = func.handler;
+      const handlerFunction = handler.split('.').shift();
+
+      // Information about the serverless framework version of the handler
+      // [NOTE: the version in the package directory (pathDist)]
+      const serverlessHandlerPath = this._getServerlessHandlerPath(func, pathDist);
+
+      // The new wrapped handler.
+      // This will take the place of the original serverless framework handler
+      const wrappedServerlessHandlerPath = serverlessHandlerPath;
+
+      // We will save the original serverless framework handler
+      // so that it can be included by the wrapped handler
+      // [NOTE: temporarily saved in the source directory]
+      const savedHandlerFilename = this._getSavedHandlerFilename(func);
+      const savedHandlerPath = this._getSavedHandlerPath(func, pathSource);
+
+      // Relative path to the wrapper function, from the serverless handler function
+      const rootPath = project.getRootPath();
+      const relativeWrapperPath = func.wrapperPath
+        ? path.relative(pathSource, path.join(rootPath, func.wrapperPath)) // If found function wrapper path
+        : path.relative(pathSource, path.join(rootPath, project.custom.wrapper.path)); // Fallback to project wrapper file
+      const absolutePath = path.join(pathSource, relativeWrapperPath);
+      // 0. Check if file exist in path
+      return fs.statAsync(absolutePath)
+
+      // 1. Move the original serverless framework handler to savedHandlerPath
+      // [NOTE: force this write if necessary]
+        .then(() => fs.moveAsync(serverlessHandlerPath, savedHandlerPath, { clobber: true }))
+        .then(() => {
+          // 2. Generate wrapped handler code
+          return CODE_TEMPLATE({
+            orig_handler_path: `./${savedHandlerFilename}`,
+            wrapper_path: relativeWrapperPath,
+            handler_name: handlerFunction,
+          });
+        })
+        .then(code => {
+          // 3. Write code to wrapped handler
+          return fs.writeFile(wrappedServerlessHandlerPath, code)
+        })
+        .then(() => {
+          // 4. Resolve the event
+          SCli.log(`Wrapping ${handler} with ${absolutePath}`);
+          return evt;
+        })
+    }
 
     // Information about the serverless framework version of the handler
     _getServerlessHandlerPath(func, targetDir) {
@@ -172,4 +186,3 @@ module.exports = function getPlugin(S) {
 
   return ServerlessWrappper;
 };
-
