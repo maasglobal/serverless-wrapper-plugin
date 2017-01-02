@@ -50,16 +50,21 @@ module.exports = function getPlugin(S) {
       const func = project.getFunction(evt.options.name);
 
       if (func.runtime === 'nodejs' || func.runtime === 'nodejs4.3') {
-        const config = project.custom.wrapper;
+        const funcConfig = func.custom;
+        const projConfig = project.custom;
 
-        if (func.wrapperPath || func.wrapperPath === false) {
-          // If wrapperPath is 'false', skip wrapping
-          if (func.wrapperPath === false) return Promise.resolve(evt);
-          SCli.log('Using function specifically defined wrapper file');
-          return this._wrapHandler(project, func, evt);
-        } else if (config && config.path) {
+        if (funcConfig && funcConfig.wrapper === false) {
+          // If wrapper.path exists and is 'false', skip wrapping
+          SCli.log('Wrapper skipped by function-specific config');
+          return Promise.resolve(evt);
+
+        } else if (funcConfig && funcConfig.wrapper && funcConfig.wrapper.path) {
+          SCli.log('Using function-specific wrapper file');
+          return this._wrapHandler(project, func, evt, funcConfig.wrapper.path);
+
+        } else if (projConfig && projConfig.wrapper && projConfig.wrapper.path) {
           SCli.log('Using project wrapper file');
-          return this._wrapHandler(project, func, evt);
+          return this._wrapHandler(project, func, evt, projConfig.wrapper.path);
         }
 
         return Promise.resolve(evt);
@@ -83,9 +88,16 @@ module.exports = function getPlugin(S) {
       const func = project.getFunction(evt.options.name);
 
       if (func.runtime === 'nodejs' || func.runtime === 'nodejs4.3') {
-        const config = project.custom.wrapper;
+        const funcConfig = func.custom;
+        const projConfig = project.custom;
 
-        if (func.wrapperPath || (config && config.path)) {
+        // No wrapper due to function config override, skip cleanup
+        if (funcConfig && funcConfig.wrapper === false) {
+          return Promise.resolve(evt);
+        }
+        // If we do have a wrapper, we need to clean up intermediate files
+        else if (funcConfig && funcConfig.wrapper && funcConfig.wrapper.path ||
+                 projConfig && projConfig.wrapper && projConfig.wrapper.path) {
           const pathSource = path.dirname(func.getFilePath());
           const savedHandlerPath = this._getSavedHandlerPath(func, pathSource);
 
@@ -105,7 +117,7 @@ module.exports = function getPlugin(S) {
     // Helpers
     // ------------------------------------------------------------------------
 
-    _wrapHandler(project, func, evt) {
+    _wrapHandler(project, func, evt, wrapperPath) {
       const pathSource = path.dirname(func.getFilePath());
       const pathDist = evt.options.pathDist;
 
@@ -129,10 +141,10 @@ module.exports = function getPlugin(S) {
 
       // Relative path to the wrapper function, from the serverless handler function
       const rootPath = project.getRootPath();
-      const relativeWrapperPath = func.wrapperPath
-        ? path.relative(pathSource, path.join(rootPath, func.wrapperPath)) // If found function wrapper path
-        : path.relative(pathSource, path.join(rootPath, project.custom.wrapper.path)); // Fallback to project wrapper file
+      const relativeWrapperPath =
+        path.relative(pathSource, path.join(rootPath, wrapperPath));
       const absolutePath = path.join(pathSource, relativeWrapperPath);
+
       // 0. Check if file exist in path
       return fs.statAsync(absolutePath)
 
