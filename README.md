@@ -62,7 +62,7 @@ npm install serverless-wrapper-plugin --save-dev
 ]
 ```
 
-* In the `custom` property of either your `s-project.json` or `s-function.json` add a default wrapper property. The path is relative to the project root. This is a fallback support if your s-function does not contains a `wrapperPath` property.
+* In the `custom` property of either your `s-project.json` or `s-function.json` add a default wrapper property. The path is relative to the project root. This is a fallback if your s-function does not contain a `wrapperPath` property.
 
 ```{js}
 {
