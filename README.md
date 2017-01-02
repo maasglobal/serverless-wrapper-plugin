@@ -2,7 +2,7 @@ Serverless Wrapper Plugin
 ------------------------------------------------------------------------
 [![serverless](http://public.serverless.com/badges/v3.svg)](http://www.serverless.com)
 
-This goal of this plugin is to allow you to provide an easy way to wrap your serverless functions with a wrapper function, without
+This goal of this plugin is to provide an easy way to wrap your serverless functions with a wrapper function, without
 having to edit all the functions themselves.
 
 One use case for this is for example, if you want to override ```console.warn``` to prepend a custom string, to make these warning easier to trace in the logs. You could add this to the begining of every handler in your project, or you could write one wrapper function to perform this override and use the ```serverless-wrapper-plugin``` to automatically wrap all your handlers.
