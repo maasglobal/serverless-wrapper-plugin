@@ -76,7 +76,7 @@ npm install serverless-wrapper-plugin --save-dev
 }
 ```
 
-* To set a custom wrapper for specific function, add the wrapper function's relative path to `s-function.json`. If you do not want your function to be wrapped by any of the wrapper function, event the default one, set the `wrapperPath` propertry to **false**
+* To set a custom wrapper for specific function, add the wrapper function's relative path to `s-function.json`. If you do not want your function to be wrapped by any wrapper function, event the default one, set the `wrapperPath` propertry to **false**
 ```{js}
   ...
   "name": "your-function",
