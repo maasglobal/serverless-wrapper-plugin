@@ -1,6 +1,6 @@
 {
   "name": "serverless-wrapper-plugin",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Serverless Wrapper Plugin - Wrap all your functions from one place",
   "main": "index.js",
   "directories": {
