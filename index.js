@@ -161,7 +161,7 @@ module.exports = function getPlugin(S) {
         })
         .then(code => {
           // 3. Write code to wrapped handler
-          return fs.writeFile(wrappedServerlessHandlerPath, code)
+          return fs.writeFileAsync(wrappedServerlessHandlerPath, code)
         })
         .then(() => {
           // 4. Resolve the event
