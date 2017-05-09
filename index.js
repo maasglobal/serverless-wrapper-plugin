@@ -4,7 +4,7 @@ const Promise = require('bluebird');
 const path = require('path');
 const fs = Promise.promisifyAll(require('fs-extra'));
 
-const CODE_TEMPLATE = require('./lib/wrapped_handler.js');
+const codeTemplate = require('./lib/wrapped_handler.js');
 
 const SAVED_HANDLER_SUFFIX = '__orig__';
 
@@ -20,12 +20,12 @@ module.exports = function getPlugin(S) {
     registerHooks() {
       S.addHook(this.onCodeDeployPre.bind(this), {
         action: 'codeDeployLambda',
-        event: 'pre'
+        event: 'pre',
       });
 
       S.addHook(this.onCodeDeployPost.bind(this), {
         action: 'codeDeployLambda',
-        event: 'post'
+        event: 'post',
       });
 
       return Promise.resolve();
@@ -49,25 +49,21 @@ module.exports = function getPlugin(S) {
       const project = S.getProject();
       const func = project.getFunction(evt.options.name);
 
-      if (func.runtime === 'nodejs' || func.runtime === 'nodejs4.3') {
-        const funcConfig = func.custom;
-        const projConfig = project.custom;
+      const funcConfig = func.custom;
+      const projConfig = project.custom;
 
-        if (funcConfig && funcConfig.wrapper === false) {
+      if (funcConfig && funcConfig.wrapper === false) {
           // If wrapper.path exists and is 'false', skip wrapping
-          SCli.log('Wrapper skipped by function-specific config');
-          return Promise.resolve(evt);
-
-        } else if (funcConfig && funcConfig.wrapper && funcConfig.wrapper.path) {
-          SCli.log('Using function-specific wrapper file');
-          return this._wrapHandler(project, func, evt, funcConfig.wrapper.path);
-
-        } else if (projConfig && projConfig.wrapper && projConfig.wrapper.path) {
-          SCli.log('Using project wrapper file');
-          return this._wrapHandler(project, func, evt, projConfig.wrapper.path);
-        }
-
+        SCli.log('Wrapper skipped by function-specific config');
         return Promise.resolve(evt);
+
+      } else if (funcConfig && funcConfig.wrapper && funcConfig.wrapper.path) {
+        SCli.log('Using function-specific wrapper file');
+        return this._wrapHandler(project, func, evt, funcConfig.wrapper.path);
+
+      } else if (projConfig && projConfig.wrapper && projConfig.wrapper.path) {
+        SCli.log('Using project wrapper file');
+        return this._wrapHandler(project, func, evt, projConfig.wrapper.path);
       }
 
       // If we can't handle this event, just pass it through
@@ -87,27 +83,25 @@ module.exports = function getPlugin(S) {
       const project = S.getProject();
       const func = project.getFunction(evt.options.name);
 
-      if (func.runtime === 'nodejs' || func.runtime === 'nodejs4.3') {
-        const funcConfig = func.custom;
-        const projConfig = project.custom;
+      const funcConfig = func.custom;
+      const projConfig = project.custom;
 
         // No wrapper due to function config override, skip cleanup
-        if (funcConfig && funcConfig.wrapper === false) {
-          return Promise.resolve(evt);
-        }
+      if (funcConfig && funcConfig.wrapper === false) {
+        return Promise.resolve(evt);
+      }
         // If we do have a wrapper, we need to clean up intermediate files
-        else if (funcConfig && funcConfig.wrapper && funcConfig.wrapper.path ||
+      else if (funcConfig && funcConfig.wrapper && funcConfig.wrapper.path ||
                  projConfig && projConfig.wrapper && projConfig.wrapper.path) {
-          const pathSource = path.dirname(func.getFilePath());
-          const savedHandlerPath = this._getSavedHandlerPath(func, pathSource);
+        const pathSource = path.dirname(func.getFilePath());
+        const savedHandlerPath = this._getSavedHandlerPath(func, pathSource);
 
           // 1. Remove the saved version
-          return fs.unlinkAsync(savedHandlerPath)
+        return fs.unlinkAsync(savedHandlerPath)
             .then(() => {
               // 2. Resolve the event
               return evt;
             });
-        }
       }
 
       // If we can't handle this event, just pass it through
@@ -153,7 +147,7 @@ module.exports = function getPlugin(S) {
         .then(() => fs.moveAsync(serverlessHandlerPath, savedHandlerPath, { clobber: true }))
         .then(() => {
           // 2. Generate wrapped handler code
-          return CODE_TEMPLATE({
+          return codeTemplate({
             orig_handler_path: `./${savedHandlerFilename}`,
             wrapper_path: relativeWrapperPath,
             handler_name: handlerFunction,
@@ -161,13 +155,13 @@ module.exports = function getPlugin(S) {
         })
         .then(code => {
           // 3. Write code to wrapped handler
-          return fs.writeFileAsync(wrappedServerlessHandlerPath, code)
+          return fs.writeFileAsync(wrappedServerlessHandlerPath, code);
         })
         .then(() => {
           // 4. Resolve the event
           SCli.log(`Wrapping ${handler} with ${absolutePath}`);
           return evt;
-        })
+        });
     }
 
     // Information about the serverless framework version of the handler
@@ -181,18 +175,18 @@ module.exports = function getPlugin(S) {
 
     // Information about the serverless framework version of the handler
     _getSavedHandlerFilename(func) {
-        const serverlessHandler = func.getHandler();
-        const serverlessHandlerName = serverlessHandler.split('.')[0];
+      const serverlessHandler = func.getHandler();
+      const serverlessHandlerName = serverlessHandler.split('.')[0];
 
         // Information about the saved version of the original serverless handler
-        return `${serverlessHandlerName}${SAVED_HANDLER_SUFFIX}.js`;
+      return `${serverlessHandlerName}${SAVED_HANDLER_SUFFIX}.js`;
     }
 
     // Information about the intermediary saved version of the serverless handler
     _getSavedHandlerPath(func, targetDir) {
-        const savedHandlerFilename = this._getSavedHandlerFilename(func);
+      const savedHandlerFilename = this._getSavedHandlerFilename(func);
 
-        return path.join(targetDir, savedHandlerFilename);
+      return path.join(targetDir, savedHandlerFilename);
     }
   }
 

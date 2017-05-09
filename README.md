@@ -16,6 +16,7 @@ Another use case might be, you want to write a process to periodically make requ
 
 ## Setup
 > Not compatible with Serverless 1.0.0 and above
+> Support only Node Lambdas
 
 > NOTE: If you are using the ```serverless-webpack-plugin```, this plugin must be before the webpack plugin in the list.
 
