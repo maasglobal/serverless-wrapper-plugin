@@ -149,7 +149,7 @@ module.exports = function getPlugin(S) {
           // 2. Generate wrapped handler code
           return codeTemplate({
             orig_handler_path: `./${savedHandlerFilename}`,
-            wrapper_path: relativeWrapperPath,
+            wrapper_path: relativeWrapperPath.replace(/\\/g, '/'), // Support Windows env
             handler_name: handlerFunction,
           });
         })
