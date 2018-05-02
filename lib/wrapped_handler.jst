@@ -4,6 +4,6 @@
 const _handler = require('{{=it.orig_handler_path}}').{{=it.handler_name}};
 const _wrapper = require('{{=it.wrapper_path}}');
 
-module.exports.{{=it.handler_name}} = function (event, context) {
-  return _wrapper(_handler, event, context);
+module.exports.{{=it.handler_name}} = function (event, context, callback) {
+  return _wrapper(_handler, event, context, callback);
 }
