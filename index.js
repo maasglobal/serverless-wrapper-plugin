@@ -117,7 +117,7 @@ module.exports = function getPlugin(S) {
 
       // Get the name of the handler function (within the handler module)
       const handler = func.handler;
-      const handlerFunction = handler.split('.').shift();
+      const handlerFunction = handler.split('.').pop();
 
       // Information about the serverless framework version of the handler
       // [NOTE: the version in the package directory (pathDist)]
