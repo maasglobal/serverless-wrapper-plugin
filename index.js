@@ -36,9 +36,9 @@ module.exports = function getPlugin(S) {
       S.addHook(this.post.bind(this), {
         action: 'functionRun',
         event: 'post',
-			});
+      });
 
-			return Promise.resolve();
+      return Promise.resolve();
     }
 
     // Pre event
@@ -103,17 +103,17 @@ module.exports = function getPlugin(S) {
         // If we do have a wrapper, we need to clean up intermediate files
       else if (funcConfig && funcConfig.wrapper && funcConfig.wrapper.path ||
                  projConfig && projConfig.wrapper && projConfig.wrapper.path) {
-				const pathSource = path.dirname(func.getFilePath());
-				const isLocalRun = !evt.options.pathDist;
-				const savedHandlerPath = this._getSavedHandlerPath(func, pathSource);
+        const pathSource = path.dirname(func.getFilePath());
+        const isLocalRun = !evt.options.pathDist;
+        const savedHandlerPath = this._getSavedHandlerPath(func, pathSource);
 				
-				const action = isLocalRun
-					? fs.moveAsync(
-							savedHandlerPath,
-							this._getServerlessHandlerPath(func.handler, pathSource),
-							{ clobber: true }
-						)
-					: fs.unlinkAsync(savedHandlerPath);
+        const action = isLocalRun
+          ? fs.moveAsync(
+              savedHandlerPath,
+              this._getServerlessHandlerPath(func.handler, pathSource),
+              { clobber: true }
+            )
+          : fs.unlinkAsync(savedHandlerPath);
 
         return action.then(() => evt);
       }
@@ -127,8 +127,8 @@ module.exports = function getPlugin(S) {
 
     _wrapHandler(project, func, evt, wrapperPath) {
       const pathSource = path.dirname(func.getFilePath());
-			const pathDist = evt.options.pathDist;
-			const isLocalRun = !pathDist;
+      const pathDist = evt.options.pathDist;
+      const isLocalRun = !pathDist;
 
       // Get the name of the handler function (within the handler module)
       const handler = func.handler;
@@ -137,9 +137,9 @@ module.exports = function getPlugin(S) {
       // Information about the serverless framework version of the handler
       // [NOTE: the version in the package directory (pathDist)]
       const serverlessHandlerPath = this._getServerlessHandlerPath(
-				isLocalRun ? handler : func.getHandler(),
-				isLocalRun ? pathSource : pathDist
-			);
+        isLocalRun ? handler : func.getHandler(),
+        isLocalRun ? pathSource : pathDist
+      );
 
       // The new wrapped handler.
       // This will take the place of the original serverless framework handler
