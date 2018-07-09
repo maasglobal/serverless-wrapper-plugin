@@ -18,12 +18,12 @@ module.exports = function getPlugin(S) {
     }
 
     registerHooks() {
-      S.addHook(this.onCodeDeployPre.bind(this), {
+      S.addHook(this.pre.bind(this), {
         action: 'codeDeployLambda',
         event: 'pre',
       });
 
-      S.addHook(this.onCodeDeployPost.bind(this), {
+      S.addHook(this.post.bind(this), {
         action: 'codeDeployLambda',
         event: 'post',
       });
@@ -38,7 +38,7 @@ module.exports = function getPlugin(S) {
      * Intercept the codeDeployLammbda hook and wrap the serverless handler
      * function in the configured wrapper function.
      */
-    onCodeDeployPre(evt) {
+    pre(evt) {
       // Validate: Check Serverless version
       if (parseInt(S._version.split('.')[1], 10) < 5) {
         SCli.log('WARNING: This version of the Serverless Wrapper Plugin ' +
@@ -78,7 +78,7 @@ module.exports = function getPlugin(S) {
      * Once the codeDeployLambda operation has completed,
      * clean up any intermediate files
      */
-    onCodeDeployPost(evt) {
+    post(evt) {
       // Get function
       const project = S.getProject();
       const func = project.getFunction(evt.options.name);
