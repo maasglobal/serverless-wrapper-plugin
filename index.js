@@ -28,7 +28,17 @@ module.exports = function getPlugin(S) {
         event: 'post',
       });
 
-      return Promise.resolve();
+      S.addHook(this.pre.bind(this), {
+        action: 'functionRun',
+        event: 'pre',
+      });
+
+      S.addHook(this.post.bind(this), {
+        action: 'functionRun',
+        event: 'post',
+			});
+
+			return Promise.resolve();
     }
 
     // Pre event
@@ -93,15 +103,19 @@ module.exports = function getPlugin(S) {
         // If we do have a wrapper, we need to clean up intermediate files
       else if (funcConfig && funcConfig.wrapper && funcConfig.wrapper.path ||
                  projConfig && projConfig.wrapper && projConfig.wrapper.path) {
-        const pathSource = path.dirname(func.getFilePath());
-        const savedHandlerPath = this._getSavedHandlerPath(func, pathSource);
+				const pathSource = path.dirname(func.getFilePath());
+				const isLocalRun = !evt.options.pathDist;
+				const savedHandlerPath = this._getSavedHandlerPath(func, pathSource);
+				
+				const action = isLocalRun
+					? fs.moveAsync(
+							savedHandlerPath,
+							this._getServerlessHandlerPath(func.handler, pathSource),
+							{ clobber: true }
+						)
+					: fs.unlinkAsync(savedHandlerPath);
 
-          // 1. Remove the saved version
-        return fs.unlinkAsync(savedHandlerPath)
-            .then(() => {
-              // 2. Resolve the event
-              return evt;
-            });
+        return action.then(() => evt);
       }
 
       // If we can't handle this event, just pass it through
@@ -113,7 +127,8 @@ module.exports = function getPlugin(S) {
 
     _wrapHandler(project, func, evt, wrapperPath) {
       const pathSource = path.dirname(func.getFilePath());
-      const pathDist = evt.options.pathDist;
+			const pathDist = evt.options.pathDist;
+			const isLocalRun = !pathDist;
 
       // Get the name of the handler function (within the handler module)
       const handler = func.handler;
@@ -121,7 +136,10 @@ module.exports = function getPlugin(S) {
 
       // Information about the serverless framework version of the handler
       // [NOTE: the version in the package directory (pathDist)]
-      const serverlessHandlerPath = this._getServerlessHandlerPath(func, pathDist);
+      const serverlessHandlerPath = this._getServerlessHandlerPath(
+				isLocalRun ? handler : func.getHandler(),
+				isLocalRun ? pathSource : pathDist
+			);
 
       // The new wrapped handler.
       // This will take the place of the original serverless framework handler
@@ -165,8 +183,7 @@ module.exports = function getPlugin(S) {
     }
 
     // Information about the serverless framework version of the handler
-    _getServerlessHandlerPath(func, targetDir) {
-      const serverlessHandler = func.getHandler();
+    _getServerlessHandlerPath(serverlessHandler, targetDir) {
       const serverlessHandlerName = serverlessHandler.split('.')[0];
       const serverlessHandlerFilename = `${serverlessHandlerName}.js`;
 
