@@ -18,13 +18,23 @@ module.exports = function getPlugin(S) {
     }
 
     registerHooks() {
-      S.addHook(this.onCodeDeployPre.bind(this), {
+      S.addHook(this.preAction.bind(this), {
         action: 'codeDeployLambda',
         event: 'pre',
       });
 
-      S.addHook(this.onCodeDeployPost.bind(this), {
+      S.addHook(this.postAction.bind(this), {
         action: 'codeDeployLambda',
+        event: 'post',
+      });
+
+      S.addHook(this.preAction.bind(this), {
+        action: 'functionRun',
+        event: 'pre',
+      });
+
+      S.addHook(this.postAction.bind(this), {
+        action: 'functionRun',
         event: 'post',
       });
 
@@ -38,7 +48,7 @@ module.exports = function getPlugin(S) {
      * Intercept the codeDeployLammbda hook and wrap the serverless handler
      * function in the configured wrapper function.
      */
-    onCodeDeployPre(evt) {
+    preAction(evt) {
       // Validate: Check Serverless version
       if (parseInt(S._version.split('.')[1], 10) < 5) {
         SCli.log('WARNING: This version of the Serverless Wrapper Plugin ' +
@@ -78,7 +88,7 @@ module.exports = function getPlugin(S) {
      * Once the codeDeployLambda operation has completed,
      * clean up any intermediate files
      */
-    onCodeDeployPost(evt) {
+    postAction(evt) {
       // Get function
       const project = S.getProject();
       const func = project.getFunction(evt.options.name);
@@ -94,14 +104,18 @@ module.exports = function getPlugin(S) {
       else if (funcConfig && funcConfig.wrapper && funcConfig.wrapper.path ||
                  projConfig && projConfig.wrapper && projConfig.wrapper.path) {
         const pathSource = path.dirname(func.getFilePath());
+        const isLocalRun = !evt.options.pathDist;
         const savedHandlerPath = this._getSavedHandlerPath(func, pathSource);
+				
+        const action = isLocalRun
+          ? fs.moveAsync(
+              savedHandlerPath,
+              this._getServerlessHandlerPath(func.handler, pathSource),
+              { clobber: true }
+            )
+          : fs.unlinkAsync(savedHandlerPath);
 
-          // 1. Remove the saved version
-        return fs.unlinkAsync(savedHandlerPath)
-            .then(() => {
-              // 2. Resolve the event
-              return evt;
-            });
+        return action.then(() => evt);
       }
 
       // If we can't handle this event, just pass it through
@@ -114,6 +128,7 @@ module.exports = function getPlugin(S) {
     _wrapHandler(project, func, evt, wrapperPath) {
       const pathSource = path.dirname(func.getFilePath());
       const pathDist = evt.options.pathDist;
+      const isLocalRun = !pathDist;
 
       // Get the name of the handler function (within the handler module)
       const handler = func.handler;
@@ -121,7 +136,10 @@ module.exports = function getPlugin(S) {
 
       // Information about the serverless framework version of the handler
       // [NOTE: the version in the package directory (pathDist)]
-      const serverlessHandlerPath = this._getServerlessHandlerPath(func, pathDist);
+      const serverlessHandlerPath = this._getServerlessHandlerPath(
+        isLocalRun ? handler : func.getHandler(),
+        isLocalRun ? pathSource : pathDist
+      );
 
       // The new wrapped handler.
       // This will take the place of the original serverless framework handler
@@ -165,8 +183,7 @@ module.exports = function getPlugin(S) {
     }
 
     // Information about the serverless framework version of the handler
-    _getServerlessHandlerPath(func, targetDir) {
-      const serverlessHandler = func.getHandler();
+    _getServerlessHandlerPath(serverlessHandler, targetDir) {
       const serverlessHandlerName = serverlessHandler.split('.')[0];
       const serverlessHandlerFilename = `${serverlessHandlerName}.js`;
 
