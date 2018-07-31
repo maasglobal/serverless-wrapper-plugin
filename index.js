@@ -1,8 +1,7 @@
 'use strict';
 
-const Promise = require('bluebird');
 const path = require('path');
-const fs = Promise.promisifyAll(require('fs-extra'));
+const fs = require('fs-extra');
 
 const codeTemplate = require('./lib/wrapped_handler.js');
 
@@ -108,12 +107,12 @@ module.exports = function getPlugin(S) {
         const savedHandlerPath = this._getSavedHandlerPath(func, pathSource);
 				
         const action = isLocalRun
-          ? fs.moveAsync(
+          ? fs.move(
               savedHandlerPath,
               this._getServerlessHandlerPath(func.handler, pathSource),
-              { clobber: true }
+              { overwrite: true }
             )
-          : fs.unlinkAsync(savedHandlerPath);
+          : fs.remove(savedHandlerPath);
 
         return action.then(() => evt);
       }
@@ -158,28 +157,34 @@ module.exports = function getPlugin(S) {
       const absolutePath = path.join(pathSource, relativeWrapperPath);
 
       // 0. Check if file exist in path
-      return fs.statAsync(absolutePath)
-
-      // 1. Move the original serverless framework handler to savedHandlerPath
-      // [NOTE: force this write if necessary]
-        .then(() => fs.moveAsync(serverlessHandlerPath, savedHandlerPath, { clobber: true }))
-        .then(() => {
-          // 2. Generate wrapped handler code
-          return codeTemplate({
-            orig_handler_path: `./${savedHandlerFilename}`,
-            wrapper_path: relativeWrapperPath.replace(/\\/g, '/'), // Support Windows env
-            handler_name: handlerFunction,
+      return fs.pathExists(savedHandlerPath).then(tmpHandlerExists => {
+        if (isLocalRun && tmpHandlerExists) {
+          throw new Error(
+            `Cannot wrap lambda: Temporary wrapper file found at ${savedHandlerPath}\n` +
+            'It\'s likely that previous run crashed, and left broken state.\n' +
+            'If it\'s the case, then replacing lambda handler file with content of ' +
+            `${savedHandlerFilename}, and removing the ${savedHandlerFilename} should fix the issue.`
+          );
+        }
+        return fs.move(serverlessHandlerPath, savedHandlerPath, { overwrite: true })
+          .then(() => {
+            // 2. Generate wrapped handler code
+            return codeTemplate({
+              orig_handler_path: `./${savedHandlerFilename}`,
+              wrapper_path: relativeWrapperPath.replace(/\\/g, '/'), // Support Windows env
+              handler_name: handlerFunction,
+            });
+          })
+          .then(code => {
+            // 3. Write code to wrapped handler
+            return fs.outputFile(wrappedServerlessHandlerPath, code);
+          })
+          .then(() => {
+            // 4. Resolve the event
+            SCli.log(`Wrapping ${handler} with ${absolutePath}`);
+            return evt;
           });
-        })
-        .then(code => {
-          // 3. Write code to wrapped handler
-          return fs.writeFileAsync(wrappedServerlessHandlerPath, code);
-        })
-        .then(() => {
-          // 4. Resolve the event
-          SCli.log(`Wrapping ${handler} with ${absolutePath}`);
-          return evt;
-        });
+      });
     }
 
     // Information about the serverless framework version of the handler
